@@ -1,0 +1,69 @@
+#include <Wire.h>
+#include <Adafruit_SSD1306.h>
+#include <Adafruit_GFX.h>
+
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
+
+#define SCREEN_ADDRESS 0x3C
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
+
+#define MQ135_ANALOG_PIN A0
+
+void setup() {
+  Serial.begin(9600);
+
+  if(!display.begin(SSD1306_I2C_ADDRESS, SCREEN_ADDRESS)) {
+    Serial.println(F("SSD1306 allocation failed"));
+    for(;;);
+  }
+
+  display.display();
+  delay(2000); // Pause for 2 seconds
+  display.clearDisplay();
+  display.setTextSize(1);      
+  display.setTextColor(SSD1306_WHITE);  
+}
+
+void loop() {
+  float sensorValue = analogRead(MQ135_ANALOG_PIN);
+  float airQuality = calculateAirQuality(sensorValue);
+  
+  display.clearDisplay();
+  display.setCursor(0,0);
+  display.println(F("Air Quality:"));
+
+  if (airQuality > 200) {
+    display.println(F("Poor"));
+    display.println(F("Ventilate!"));
+  } else {
+    display.println(F("Good"));
+  }
+  
+  display.display();
+
+  Serial.print(F("Air Quality: "));
+  Serial.println(airQuality);
+
+  delay(1000); // Update every second
+}
+
+float calculateAirQuality(float sensorValue) {
+  // Adjust this value based on your sensor's characteristics
+  float zeroValue = 230;
+  float minValue = 380;
+  
+  // Calculate the resistance of the sensor
+  float sensorResistance = (1023 / sensorValue) - 1;
+  
+  // Calculate air quality using a formula
+  float airQuality = 100 * (sensorResistance - zeroValue) / (minValue - zeroValue);
+  
+  if (airQuality < 0) {
+    airQuality = 0;
+  } else if (airQuality > 100) {
+    airQuality = 100;
+  }
+  
+  return airQuality;
+}
